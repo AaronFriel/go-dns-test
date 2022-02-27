@@ -1,8 +1,8 @@
 archives:
 - id: archive
-  name_template: '{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}-{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}'
+  name_template: '{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}-via-{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}'
 builds:
-- binary: go-dns-test
+- binary: go-dns-test-via-{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}
   env:
   - CGO_ENABLED=0
   - GO111MODULE=on
@@ -20,4 +20,4 @@ release:
 snapshot:
   name_template: '{{ .Tag }}-SNAPSHOT'
 checksum:
-  name_template: '{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}-checksums.txt'
+  name_template: 'checksums-{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}.txt'
