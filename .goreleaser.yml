@@ -1,6 +1,6 @@
 archives:
 - id: archive
-  name_template: '{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}-${{ .Env.GO_VERSION }}-${{ .Env.BUILD_PLATFORM }}'
+  name_template: '{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}-{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}'
 builds:
 - binary: go-dns-test
   env:
@@ -19,3 +19,5 @@ release:
   disable: false
 snapshot:
   name_template: '{{ .Tag }}-SNAPSHOT'
+checksum:
+  name_template: '{{ .Env.GO_VERSION }}-{{ .Env.BUILD_PLATFORM }}-checksums.txt'
