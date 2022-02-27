@@ -1,0 +1,42 @@
+env:
+  IS_PRERELEASE: "true"
+jobs:
+  publish:
+    name: publish
+    runs-on: ${{ matrix.build-platform }}
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+    - name: Unshallow clone for tags
+      run: git fetch --prune --unshallow --tags || true
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.goversion }}
+        stable: false
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        args: release -p 10 --rm-dist --timeout 60m0s
+        version: latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GO_VERSION: ${{ matrix.goversion }}
+        BUILD_PLATFORM: ${{ matrix.build-platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goversion: 1.18.0-beta2 # does not include patch
+            build-platform: ubuntu-latest
+          - goversion: 1.18.0-beta2 # does not include patch
+            build-platform: macos-latest
+          - goversion: 1.18.0-rc1 # includes DNS patch
+            build-platform: ubuntu-latest
+name: publish
+"on":
+  push:
+    tags:
+    - v*.*.*
+    branches:
+    - main
