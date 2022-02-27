@@ -1,8 +1,8 @@
 env:
   IS_PRERELEASE: "true"
 jobs:
-  publish:
-    name: publish
+  build:
+    name: build
     runs-on: ${{ matrix.build-platform }}
     steps:
     - name: Checkout Repo
@@ -17,26 +17,80 @@ jobs:
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2
       with:
-        args: release -p 10 --rm-dist --timeout 60m0s
+        args: release -p 10 --timeout 60m0s --skip-publish
         version: latest
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GO_VERSION: ${{ matrix.goversion }}
+        GO_VERSION: go${{ matrix.goversion }}
         BUILD_PLATFORM: ${{ matrix.build-platform }}
+    - name: Publish intermediate artifacts for linux / amd64
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist-linux-amd64-via-${{ matrix.goversion }}-${{ matrix.build-platform }}
+        path: |
+         dist/go-dns-test_linux_amd64/*
+    - name: Publish intermediate artifacts for linux / arm64
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist-linux-arm64-via-${{ matrix.goversion }}-${{ matrix.build-platform }}
+        path: |
+         dist/go-dns-test_linux_arm64/*
+    - name: Publish intermediate artifacts for darwin / amd64
+      uses: actions/upload-artifact@v2
+      with:
+        # note we rename darwin (goreleaser) to macos here
+        name: dist-macos-amd64-via-${{ matrix.goversion }}-${{ matrix.build-platform }}
+        path: |
+         dist/go-dns-test_darwin_amd64/*
+    - name: Publish intermediate artifacts for darwin / arm64
+      uses: actions/upload-artifact@v2
+      with:
+        # note we rename darwin (goreleaser) to macos here
+        name: dist-macos-arm64-via-${{ matrix.goversion }}-${{ matrix.build-platform }}
+        path: |
+         dist/go-dns-test_darwin_arm64/*
     strategy:
       fail-fast: false
-      matrix:
+      matrix: # this is the build platform matrix
         include:
           - goversion: 1.18.0-beta2 # does not include patch
             build-platform: ubuntu-latest
-          - goversion: 1.18.0-beta2 # does not include patch
-            build-platform: macos-latest
           - goversion: 1.18.0-rc1 # includes DNS patch
             build-platform: ubuntu-latest
+  release:
+    name: release
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts for our OS
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: List artifacts
+        run: ls -laR artifacts
+      - name: Copy artifacts for this OS to dist, create archive
+        run: |
+          mkdir dist
+          cp artifacts/dist-${{ matrix.platform }}-*/* ./dist/
+          tar -czvf dist-${{ matrix.platform }}.tar.gz ./dist/*
+      - name: Create/update release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist-${{ matrix.platform }}.tar.gz"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
+    strategy:
+      fail-fast: false
+      matrix: # this is the target platform matrix, one entry for each artifact upload in build step
+        include:
+          - platform: linux-amd64
+          - platform: linux-arm64
+          - platform: macos-amd64
+          - paltform: macos-arm64
 name: publish
 "on":
   push:
     tags:
     - v*.*.*
-    branches:
-    - main
+    - v*.*.*-**
